@@ -12,6 +12,7 @@ const client = new Client({
 });
 
 const token = process.env.DISCORD_TOKEN;
+
 async function fetchModNames(uuid) {
     try {
         const url = `https://thunderstore.io/api/experimental/legacyprofile/get/${uuid}/`;
@@ -51,6 +52,25 @@ async function fetchModNames(uuid) {
     }
 }
 
+function splitMessage(content, maxLength = 2000) {
+    const lines = content.split('\n');
+    let result = [];
+    let chunk = '```';
+    for (let line of lines) {
+        if (chunk.length + line.length + 1 > maxLength) {
+            chunk += '```';
+            result.push(chunk);
+            chunk = '```';
+        }
+        chunk += line + '\n';
+    }
+    if (chunk.length > 3) {
+        chunk += '```';
+        result.push(chunk);
+    }
+    return result;
+}
+
 client.on('messageCreate', async message => {
     if (message.content.startsWith('!modlist')) {
         const args = message.content.split(' ');
@@ -62,7 +82,12 @@ client.on('messageCreate', async message => {
         const modNames = await fetchModNames(uuid);
 
         if (modNames && modNames.length > 0) {
-            message.channel.send(`Mod Names:\n\`\`\`${modNames.join('\n')}\`\`\``);
+            const modList = `Mod Names:\n${modNames.join('\n')}`;
+            const messages = splitMessage(modList);
+
+            for (const msg of messages) {
+                await message.channel.send(msg);
+            }
         } else {
             message.channel.send('No mods found or the profile is invalid.');
         }
